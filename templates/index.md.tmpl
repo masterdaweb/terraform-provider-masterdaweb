@@ -1,0 +1,78 @@
+---
+page_title: "Provider: Master da Web"
+description: |-
+  Manage Master da Web cloud instances, SSH keys, firewalls, VPCs, snapshots, reverse DNS, VPN gateways, DNS zones and records, projects, serverless services, managed databases, Object Storage, the Security Center and webhooks.
+---
+
+# Master da Web Provider
+
+Manage [Master da Web](https://www.masterdaweb.com) as code:
+
+- **Compute**: cloud instances (VPS) — ordered, built, started and stopped, resized, reinstalled — with their SSH
+  keys, snapshots and backup schedules, and the catalog to choose from (regions, plans, images).
+- **Networking**: firewalls with their rules, VPCs (private networks between instances) and reverse DNS.
+- **VPN**: who can connect to a VPN gateway (logins with the VPN app) and the gateway's settings, applied to it.
+- **DNS**: zones and record sets on the platform's nameservers.
+- **Projects**: what groups instances, databases, buckets and serverless services under one name.
+- **Serverless**: services (web apps, private services, workers and cron jobs, built from a Git repository or
+  run from an image), their environment variables, domains, bindings and log drains.
+- **Databases and storage**: managed PostgreSQL, MySQL, MariaDB and Redis databases, Object Storage buckets and
+  their S3 access keys.
+- **Security**: the Security Center's score and findings, the risks the account accepts, and how it is scanned.
+- **Account**: webhooks that send the account's events to an address of yours, Slack or Discord.
+
+Everything goes through the public API (v1) with an API token, as the `mw` CLI does.
+
+## Example Usage
+
+{{ tffile "examples/provider/provider.tf" }}
+
+A whole app — an ASP.NET Core service with a PostgreSQL database, a bucket, a domain and a log drain — is
+in the [ASP.NET Core and PostgreSQL guide](guides/aspnet-postgres).
+
+## Authentication
+
+Create a token in the console under **Settings → API tokens** and give it to the provider as `token`, or in
+the `MW_TOKEN` environment variable (the one the `mw` CLI reads). Give the token the scopes of what Terraform
+manages:
+
+| To manage | Scopes |
+| --- | --- |
+| Instances, their snapshots and SSH keys | `vm:read`, `vm:write`, `vm:power`, `order:write`, `billing:read` (and `vm:delete` to destroy instances) |
+| Firewalls, VPCs, reverse DNS, VPN gateways | `network:read`, `network:write` |
+| The Security Center | `security:read`, `security:write` |
+| DNS zones and records | `dns:read`, `dns:write` |
+| Projects, services, variables, domains, bindings, log drains | `serverless:read`, `serverless:write` |
+| Databases | `databases:read`, `databases:write` |
+| Buckets and access keys | `storage:read`, `storage:write` |
+| Webhooks | `account:read`, `webhooks:write` |
+| Destroying projects, services, databases, buckets, access keys, webhooks | `serverless:delete`, `databases:delete`, `storage:delete`, `webhooks:delete` |
+
+Some changes are an administrator's: secret variables, log drains, removing a binding, making and revoking
+access keys, webhooks, and destroying a project, a database or a bucket.
+
+## How it behaves
+
+- **Waits.** Terraform waits for what the API does in the background — an instance's order and build, a resize,
+  a reinstall, a firewall's commit, an instance joining a VPC — up to each resource's `timeouts`, and it waits
+  while another operation holds an instance (a backup, a snapshot) instead of failing.
+- **Paying for instances.** An instance with `subscription_id` and `payment = "balance"` is paid from that
+  subscription's balance and built at once. Without one, its order raises an invoice and Terraform waits for it
+  to be paid.
+- **Resizes.** Changing an instance's plan, main disk, data disks, add-ons or extra addresses resizes it in place,
+  quoted at plan time: what it costs now and per hour after, whether it restarts, what it removes. A main disk
+  never shrinks, and what the API would refuse is refused at plan time.
+- **Reinstalls.** Changing an instance's image, SSH keys, user data or app inputs reinstalls it in place (its
+  disk is replaced; its addresses, plan and billing stay), and the plan warns about it.
+- **Deployments.** Creating a service starts its first deployment, and changes to a service, its variables
+  or its bindings start a new one, unless `deploy = false`. Terraform never waits for a deployment to
+  finish; follow it in the console or with `mw logs`.
+- **Deletion protection.** Projects, databases and buckets are protected from deletion by default (services
+  can be). Destroying a protected one fails, saying so: set `deletion_protection = false`, apply, then destroy.
+- **Secrets.** Passwords, a secret variable, a log drain's token and an access key's secret are never shown
+  again by the API: Terraform keeps the values it was given (in its state, which is sensitive).
+- **Retries.** A request refused for its rate (429), or by a briefly unavailable API (502, 503, 504), is sent
+  again after the wait the API asks for, with the same `Idempotency-Key`, so a retry never does the work twice.
+- **Import.** Every resource can be imported; each page says by what.
+
+{{ .SchemaMarkdown | trimspace }}

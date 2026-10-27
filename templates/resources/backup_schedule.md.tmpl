@@ -1,0 +1,27 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Compute"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+The instance needs the backup add-on (`addons` on `masterdaweb_instance`, like `{ code = "backup-slot", quantity = 3 }`):
+without it the API refuses the schedule, saying so. When the slots are full, the oldest backup makes room for the new
+one. Restoring a backup is done in the console or with the API (`POST /v1/backups/{id}/restore`): it overwrites the
+instance.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A schedule is imported by its instance's id:
+
+{{ codefile "shell" .ImportFile }}

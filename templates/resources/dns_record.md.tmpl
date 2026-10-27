@@ -1,0 +1,27 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "DNS"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+One resource is a whole record set: every value at one name and type (two A records for `www` are one
+`masterdaweb_dns_record` with two `records`), changed in one step. Creating a record set that already exists is
+refused: import it to manage it. Values are compared as the nameservers keep them, so `www.example.com` and
+`www.example.com.`, or a TXT with or without its quotes, are the same.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A record set is imported as `<zone_id>/<name>/<type>`:
+
+{{ codefile "shell" .ImportFile }}

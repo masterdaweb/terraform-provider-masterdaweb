@@ -1,0 +1,62 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Compute"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+## How changes apply
+
+| Change | What happens |
+| --- | --- |
+| `name`, `description`, `power_state`, `project_id` | In place (`project_id = ""` takes it out of its project; left out, the project is not managed here). |
+| `password` | Reset on the running instance, through its guest agent. |
+| `plan`, `main_disk_extra_gb`, `extra_disks_gb`, `addons`, `extra_ipv4`, `extra_ipv6` | The instance is **resized in place**, like DigitalOcean's `size` or Vultr's `plan`. The plan quotes it: what it costs now and per hour after, whether it restarts the instance (a CPU, memory or disk change does), and what it removes. |
+| `image`, `custom_image_id`, `ssh_key_ids`, `user_data`, `app_inputs` | The instance is **reinstalled in place**: everything on its disk is replaced, its addresses, plan and billing stay. The plan warns about it. |
+| `term`, `subscription_id` | Refused at plan time: they belong to the subscription. |
+| `region_id`, `network_mode`, a set `vpc_id` | The instance is replaced (a new order). |
+
+## Resizing
+
+- **Plans.** Any plan the instance can move to, up or down: an upgrade on a commitment is charged now for the rest of
+  the cycle, a downgrade gives the difference back as credit. When the subscription's balance does not cover it, the
+  plan says what is short and the apply stops before anything changes (`shortfall_cents`): top the balance up and
+  apply again.
+- **The main disk only grows.** A smaller `main_disk_extra_gb`, or a smaller plan with a disk that would shrink, is
+  refused at plan time. Left out, `main_disk_extra_gb` is what the instance has, and a plan change keeps the disk's
+  size. After a disk grows, grow the partition inside the guest.
+- **Data disks** are kept in the order of `extra_disks_gb`: disks added at the end are added, disks taken off the end
+  are removed **with all their data** (the plan warns), and a disk's size never changes.
+- **Add-ons** listed in `addons` are set to their quantity; one taken out of the list is removed where it may be.
+  Add-ons the list never had are left alone.
+- **Addresses.** Raising `extra_ipv4` or `extra_ipv6` adds public addresses; lowering it releases the newest ones
+  that are not the primary, for good.
+- What the API would refuse (a plan no longer sold, an add-on only ever raised, a disk too small) is refused at plan
+  time with its reason.
+
+## Ordering and payment
+
+An instance is ordered like in the checkout. With `subscription_id` and `payment = "balance"` it is paid from
+that subscription's balance and built at once: the unattended way, for pipelines. Without a subscription the
+order starts a new one, which is always paid by invoice: Terraform waits for the invoice to be paid (up to the
+`create` timeout) and logs where to pay it. If the timeout passes first, pay the invoice and import the instance
+once it is built: applying again would order another.
+
+Terraform then waits until the instance is built and running. Destroying it terminates it at once and stops its
+billing.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+An instance is imported by its id or by a name only it has:
+
+{{ codefile "shell" .ImportFile }}

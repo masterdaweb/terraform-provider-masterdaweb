@@ -1,0 +1,27 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Account"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+A `GENERIC` webhook's deliveries are signed: `MW-Signature: t=<unix time>,v1=<hex>`, the HMAC-SHA256 of
+`<t>.<body>` with `secret`. The secret is shown by the API once, when the webhook is added: Terraform keeps it in
+its state (which is sensitive). Adding, changing and removing webhooks is an administrator's (`webhooks:write`,
+and `webhooks:delete` to remove one).
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A webhook is imported by its id:
+
+{{ codefile "shell" .ImportFile }}

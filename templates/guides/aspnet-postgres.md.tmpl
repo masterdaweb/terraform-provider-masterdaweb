@@ -1,0 +1,49 @@
+---
+page_title: "ASP.NET Core and PostgreSQL"
+subcategory: ""
+description: |-
+  A whole app as code: an ASP.NET Core service, a managed PostgreSQL bound as its connection string, a bucket, a domain and its logs sent to Datadog.
+---
+
+# ASP.NET Core and PostgreSQL
+
+This configuration publishes the [ASP.NET Core template](https://github.com/masterdaweb/mw-template-aspnet)
+(.NET 10 with Entity Framework Core) as a project of its own:
+
+- a **web service** built from the repository: the platform finds the solution, publishes it and runs the
+  migrations bundle (`./efbundle`) once per deployment, before the new version takes traffic — the
+  repository's `mw.toml` says so, which is why those settings are not in the configuration;
+- a managed **PostgreSQL** database, bound with the `dotnet` layout: the app reads
+  `ConnectionStrings__DefaultConnection` (`GetConnectionString("DefaultConnection")`), in Npgsql's format,
+  with a login of its own;
+- a private **bucket**, bound with the `MW_STORAGE_` prefix (`MW_STORAGE_ENDPOINT`, `MW_STORAGE_BUCKET`,
+  `MW_STORAGE_ACCESS_KEY_ID`, `MW_STORAGE_SECRET_ACCESS_KEY`…);
+- a **domain** of yours, and the project's **logs** sent to Datadog.
+
+## Run it
+
+```shell
+export MW_TOKEN=mwk_…            # Settings → API tokens in the console
+cp terraform.tfvars.example terraform.tfvars   # and fill it in
+terraform init
+terraform apply
+terraform output dns_records     # create these at your DNS provider
+```
+
+The service's first deployment starts with the apply, and the bindings and the variable made right after are
+usually folded into it. Terraform does not wait for it to finish: follow it in the console, or with
+`mw logs --service web`. The site answers at the `url` output once it is live, and at your domain once its
+records are found and its certificate issued.
+
+The project, the database and the bucket are protected from deletion (`protect`). To destroy everything, set
+`protect = false`, apply, then `terraform destroy`.
+
+## The configuration
+
+{{ tffile "examples/complete/versions.tf" }}
+
+{{ tffile "examples/complete/variables.tf" }}
+
+{{ tffile "examples/complete/main.tf" }}
+
+{{ tffile "examples/complete/outputs.tf" }}

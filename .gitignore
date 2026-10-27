@@ -1,0 +1,18 @@
+# Builds
+/terraform-provider-masterdaweb
+/dist/
+*.exe
+
+# Terraform working files (examples run locally)
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+terraform.tfvars
+*.auto.tfvars
+
+# Editors
+.idea/
+.vscode/
+.DS_Store

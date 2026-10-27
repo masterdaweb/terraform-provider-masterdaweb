@@ -1,0 +1,29 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Serverless"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+The API keeps the token encrypted and shows the address only shortened (`destination`): Terraform keeps the
+configured `token` and `url`, and changing either replaces the log drain (the new one sends from when it is
+made). A destination that keeps failing is turned off after 50 sends in a row (`status = "stopped"`); the
+next apply with `enabled = true` turns it back on, resuming where it stopped.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A log drain is imported by its id, or as `<project_id>/<id>`. Its token, and an HTTPS address, cannot be
+read back: Terraform takes the ones in the configuration (an address that does not look like the drain's
+own is refused).
+
+{{ codefile "shell" .ImportFile }}

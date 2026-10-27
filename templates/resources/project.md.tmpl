@@ -1,0 +1,30 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Projects"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+Instances, databases and buckets join a project with `masterdaweb_project_resource`; serverless services are
+made in it (`project_id` of `masterdaweb_serverless_service`).
+
+A project is protected from deletion by default. Destroying it while `deletion_protection` is true fails
+with a message saying so: set it to false, run `terraform apply`, then destroy. Destroying a project tears down
+its serverless services; the instances, databases and buckets in it are not touched — they only leave it.
+Terraform waits until it is gone, so its name is free again.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A project is imported by its id or its name:
+
+{{ codefile "shell" .ImportFile }}

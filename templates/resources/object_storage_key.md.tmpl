@@ -1,0 +1,26 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Object Storage"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+The secret is shown by the API once, when the key is made: Terraform keeps it in its state (which is
+sensitive) and it is not imported. Every change makes a new key. Making and revoking keys is an
+administrator's, and revoking takes `storage:delete`.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A key is imported by its id (without its secret):
+
+{{ codefile "shell" .ImportFile }}

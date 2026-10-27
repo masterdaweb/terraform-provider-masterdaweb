@@ -1,0 +1,33 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Security"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+The findings to accept come from [`masterdaweb_security_findings`](../data-sources/security_findings): a
+finding's `id` for scope `finding`, its `rule_id` for scope `rule`. Accepting a risk takes `security:write`.
+
+## When it ends
+
+The platform caps how long a risk can be accepted (per check, and overall): `effective_expires_at` is the date
+that applies, and Terraform warns when it is earlier than `expires_at`. Once the exception lapses — or someone
+revokes it in the console — it no longer stands: it leaves the state, as a resource deleted outside Terraform
+does, and the next plan proposes it again. With `expires_at` still in the future that accepts the risk anew; with
+a date already past the API refuses it, which is the cue to review it and set a later date.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+An exception in force is imported by its id:
+
+{{ codefile "shell" .ImportFile }}

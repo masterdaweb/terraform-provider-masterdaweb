@@ -1,0 +1,27 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Compute"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+Snapshots count against the plan's snapshot quota and expire 30 days after they are taken. An expired snapshot
+is gone from the state on the next refresh, and the next apply takes it again: to keep a recurring snapshot,
+change its `name` (with the date, say). While another operation holds the instance (a backup, another
+snapshot), Terraform waits for it, up to the timeouts.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A snapshot is imported as `<instance_id>/<snapshot_id>`:
+
+{{ codefile "shell" .ImportFile }}

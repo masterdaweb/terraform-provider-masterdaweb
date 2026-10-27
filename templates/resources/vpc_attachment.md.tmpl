@@ -1,0 +1,26 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Networking"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+Attaching plugs a private network interface into the instance — Terraform waits for the operation that does it — at
+`private_ip` (inside the VPC's subnet, and free) or at an address DHCP picks. The interface comes up at the
+instance's next restart, or at once with `restart = true`. An instance is on one VPC at a time, of its own region.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+An attachment is imported as `<vpc_id>/<instance_id>`:
+
+{{ codefile "shell" .ImportFile }}

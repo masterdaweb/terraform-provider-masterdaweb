@@ -1,0 +1,26 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Networking"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+The hostname must resolve to the address first (forward-confirmed reverse DNS, which mail servers check
+anyway): create its A or AAAA record before, and make the reverse DNS depend on it. A new address may have to
+be held a few days before its reverse DNS can change. Destroying the resource puts the default name back.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Reverse DNS is imported by its address:
+
+{{ codefile "shell" .ImportFile }}

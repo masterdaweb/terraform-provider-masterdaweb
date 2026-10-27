@@ -1,0 +1,29 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Networking"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+Rules apply in the order they are written, and the policies decide what no rule matches. Every change is staged
+and then committed onto exactly the instances in `instance_ids` (one left out is detached); Terraform waits for
+the commit. Rules made outside Terraform are removed on the next apply.
+
+A rule gives either a `macro` (a named service: the `masterdaweb_firewall_macros` data source lists them) or a
+protocol with its ports. `DROP` or `REJECT` as `policy_in` stops your own SSH too unless a rule lets it in.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A firewall is imported by its id or by a name only it has:
+
+{{ codefile "shell" .ImportFile }}

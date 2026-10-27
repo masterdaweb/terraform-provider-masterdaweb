@@ -1,0 +1,27 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Object Storage"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+Read and write the files with an access key and any S3 tool (`mw storage info` gives the endpoint), or bind
+the bucket to a service, which then gets a key of its own. A bucket is protected from deletion by default and
+is not deleted while services are bound to it. A deleted bucket can be restored for a few days (`mw storage
+restore`) and keeps its name until then.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A bucket is imported by its name (or its id):
+
+{{ codefile "shell" .ImportFile }}

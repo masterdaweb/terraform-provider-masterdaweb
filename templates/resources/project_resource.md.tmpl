@@ -1,0 +1,26 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Projects"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+A resource is in one project at most: putting it in one moves it out of the other. Destroying this takes the
+resource out of the project; the resource itself is not touched. Manage an instance's project here or with its
+`project_id`, not both.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A membership is imported as `<project_id>/<kind>/<resource_id>`:
+
+{{ codefile "shell" .ImportFile }}

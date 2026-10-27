@@ -1,0 +1,33 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Serverless"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+- A plain value is read back, so a change made elsewhere shows up in the next plan.
+- A secret's value is never read back. Terraform keeps the configured value in its state and compares the
+  variable's `version`: when it moved (the secret was changed elsewhere), the next plan sets the configured
+  value again.
+- A secret stays a secret: setting `secret` back to false replaces the variable.
+- Creating a variable the service already has fails, so nothing set by hand is overwritten: import it instead.
+- Variables a binding gives the service (`DATABASE_URL`, `MW_STORAGE_*`…) are the binding's, and `PORT`,
+  `K_*` and `MW_*` are the platform's.
+
+Each change starts a deployment unless `deploy = false`; removing a variable always starts one.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A variable is imported as `<service_id>/<key>`:
+
+{{ codefile "shell" .ImportFile }}

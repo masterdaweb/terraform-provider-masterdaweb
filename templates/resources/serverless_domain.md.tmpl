@@ -1,0 +1,30 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Serverless"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+A subdomain (`app.example.com`) takes a TXT record that proves it is yours and a CNAME. A root domain
+(`example.com`) cannot have a CNAME: create the TXT record and either the ALIAS (if your DNS host offers
+ALIAS or CNAME flattening) or the A records, which send visitors to `www`. Web services take up to 3
+domains; their own address (`url`) comes with them.
+
+Terraform does not wait for the domain to become active: `status` and `dns_records[*].found` say where the
+last check stood.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A domain is imported by its id, or as `<service_id>/<hostname>`:
+
+{{ codefile "shell" .ImportFile }}

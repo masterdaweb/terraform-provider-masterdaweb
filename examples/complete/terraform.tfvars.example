@@ -1,0 +1,3 @@
+bucket_name     = "shop-files-acme"
+domain          = "shop.example.com"
+datadog_api_key = "your Datadog API key"

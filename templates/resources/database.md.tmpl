@@ -1,0 +1,34 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Databases"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+Services reach a database through a [binding](serverless_binding), each with a login of its own; other
+sources need `allowed_cidrs`. TLS is required.
+
+- `size` changes resize the database once it runs, with a short restart; a bigger size comes with its
+  bigger disk. `disk_gb` grows the disk (never shrinks it).
+- `extensions` are only ever added: an extension's objects are your data, so removing one is done on the
+  database itself (`DROP EXTENSION`).
+- `password` is the owner's, from when the database was created. It is not imported (an administrator
+  reveals it in the console, or with `mw db password`).
+- A database is protected from deletion by default, and is not deleted while services are bound to it.
+  Its backups are kept for a few days after.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A database is imported by its name (or its id):
+
+{{ codefile "shell" .ImportFile }}

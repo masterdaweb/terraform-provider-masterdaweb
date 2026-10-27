@@ -1,0 +1,25 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Compute"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+A key is copied onto an instance when the instance is built or reinstalled (`ssh_key_ids`): renaming or
+destroying it here never changes a machine that already has it. An account keeps up to 100 keys, each once.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A key is imported by its id:
+
+{{ codefile "shell" .ImportFile }}

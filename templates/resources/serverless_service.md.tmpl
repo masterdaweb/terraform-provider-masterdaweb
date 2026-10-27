@@ -1,0 +1,64 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Serverless"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+## Source
+
+Give `git` or `image`:
+
+- `git.repo_url` builds a public repository from its https address (GitHub, GitLab, Bitbucket or any Git
+  host). It deploys when Terraform asks, not on pushes.
+- `git.repo` builds a repository connected in the console (Settings › Integrations), as `owner/name`: every
+  push to the branch deploys (`auto_deploy`), after its checks pass with `wait_for_ci`. When one account
+  is connected it is found by itself; with several, set `git.provider` or `git.connection_id`.
+- `image.ref` runs an image as it is. A private registry takes a credential (`mw registry`).
+
+Moving a service between `git` and `image` replaces it. A service deployed from a folder with `mw deploy`
+has neither, and is not managed here.
+
+## Deployments
+
+Creating the service starts its first deployment. Afterwards, with `deploy = true` (the default):
+
+- a new repository, branch, tag pattern or image, or a setting the build reads (`build_command`,
+  `root_dir`, `dockerfile_path`), deploys the latest commit (or the image's current digest), built afresh;
+- any other setting is applied on the version running now, without a build.
+
+With `deploy = false` changes are saved and go out with the next deployment. Terraform never waits for a
+deployment to finish: `status` says where the service stood when it was last read.
+
+### Gradual rollouts
+
+Web and private services can roll a new version out gradually: with `rollout_percent = 10` and
+`rollout_minutes = 15`, each new version takes 10% of the requests for 15 minutes first, then all of them —
+or none, if its error rate climbs. Left out (or `0`), a new version takes every request at once;
+`rollout_minutes` is 10 when left out. Both shape the next deployment: changing only them never starts one.
+When the repository's `mw.toml` defines them, they are the repository's (see Settings).
+
+## Settings
+
+Settings left out keep what the service has: the platform's defaults, or what the repository's `mw.toml`
+defines. Settings the `mw.toml` defines (listed in `repository_settings`) are read-only here: change them in
+the file and push. To clear a command or a path, set it to `""`.
+
+Destroying the service waits until it is gone, so its name is free again. A service with
+`deletion_protection = true` is not destroyed: set it to false and apply first.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A service is imported by its id, or as `<project_id>/<service name>`:
+
+{{ codefile "shell" .ImportFile }}

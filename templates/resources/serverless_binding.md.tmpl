@@ -1,0 +1,37 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Serverless"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+The variables follow the layout (`env_profile`):
+
+| Layout | Bucket | PostgreSQL | MySQL, MariaDB | Redis |
+| --- | --- | --- | --- | --- |
+| `url` | | `DATABASE_URL` (default) | `DATABASE_URL` (default) | `REDIS_URL` (default) |
+| `framework` | `AWS_*` | `DB_*` (Laravel) | `DB_*` (Laravel) | `REDIS_*` |
+| `libpq` | | `PGHOST`, `PGUSER`… | | |
+| `prefixed` | `MW_STORAGE_*` (default) | `PG_*` | `MYSQL_*` | `REDIS_*` |
+| `dotnet` | | `ConnectionStrings__DefaultConnection` (Npgsql) | `ConnectionStrings__DefaultConnection` (MySqlConnector) | `ConnectionStrings__Redis` |
+
+`env_prefix` changes the prefix of the `prefixed` layout, adds one to `url` (`ANALYTICS_DATABASE_URL`), and
+with `dotnet` names the connection string (`SHOP_DB_` is `ConnectionStrings__ShopDb`). A binding is refused
+when its variables would replace ones the service already has. Its credential is rotated every 90 days with
+a deployment; unbinding revokes it an hour later.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A binding is imported as `<service_id>/<binding_id>`, or `<service_id>/<bucket or database name>`:
+
+{{ codefile "shell" .ImportFile }}

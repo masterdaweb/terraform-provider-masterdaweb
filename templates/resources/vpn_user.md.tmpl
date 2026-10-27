@@ -1,0 +1,44 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "VPN"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+## How changes reach the gateway
+
+A VPN gateway keeps its logins in the platform's record and applies them on an *apply*, as the console's
+Apply button does. This resource applies after each of its own changes — adding, changing or removing a
+login — in place, and waits for the gateway (`timeouts`); the gateway's other pending changes go with it.
+Several logins in one run are fine: an apply already running carries the next change too.
+
+When applying needs a **rebuild** (an older gateway, or a setting like `route_all_traffic` changed and not
+applied), a login never starts one — a few minutes offline, everyone disconnected. The change stays saved
+and Terraform warns, saying so; apply it from the gateway's page in the console, or let
+[`masterdaweb_vpn_gateway_settings`](vpn_gateway_settings) do it with `allow_rebuild = true`. A gateway that
+fails to apply is a warning too: the login is saved, and `masterdaweb_vpn_gateway_settings` applies what is
+waiting on its next run. A warning, not an error, because the login exists: an error would taint it, and
+replacing it would lose a generated password.
+
+## The password
+
+Left out, the platform generates the password and Terraform keeps it in its state (which is sensitive): the
+API shows it once, when the login is made. With `send_credentials = true` the person gets their username,
+password and how to connect by email — when the login is made and when its credentials change. A password
+in the configuration is set in place when it changes; after an import, it is set on the next apply.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A login is imported by its gateway's id and its own, without its password:
+
+{{ codefile "shell" .ImportFile }}

@@ -1,0 +1,27 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "Networking"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+A VPC is a private network between instances of one region (instances only: serverless services do not join
+VPCs). Instances join it with `masterdaweb_vpc_attachment`, or when they are created (`vpc_id` on
+`masterdaweb_instance`); `members` lists them with their private addresses. Destroying a VPC takes its instances
+off it; the account's default VPC is never deleted.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+A VPC is imported by its id or by a name only it has:
+
+{{ codefile "shell" .ImportFile }}

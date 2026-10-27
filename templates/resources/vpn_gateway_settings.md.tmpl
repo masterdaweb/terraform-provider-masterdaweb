@@ -1,0 +1,38 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: "VPN"
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+The gateway itself is an instance, ordered from the VPN gateway image like any other
+([`masterdaweb_instance`](instance)); this resource manages what runs on it. A setting the configuration leaves
+out is the gateway's own and is not touched.
+
+## Applying
+
+Terraform saves the settings and applies them to the gateway in place, waiting for it (`timeouts`). Some
+changes — `route_all_traffic`, or any change on a gateway of the previous generation — need a **rebuild**: the
+machine is reinstalled with everything it had, a few minutes offline, everyone connected disconnected. Without
+`allow_rebuild = true` such an apply fails, saying so, and the settings stay saved; with it, Terraform rebuilds
+the gateway and waits.
+
+`pending_changes` follows the gateway: whenever it has changes waiting — made in the console, or a
+[`masterdaweb_vpn_user`](vpn_user) change whose apply did not go through — the next plan shows an update and
+the apply applies them. Destroying the resource leaves the gateway as it is.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+The settings are imported by the gateway's id:
+
+{{ codefile "shell" .ImportFile }}
