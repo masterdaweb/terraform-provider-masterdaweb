@@ -20,17 +20,20 @@ func TestDatabasePostgresLifecycle(t *testing.T) {
 
 	// The API keeps 203.0.113.7 as 203.0.113.7/32: the configuration's spelling stays.
 	cfg := r.config(pg(map[string]any{"project_id": testProjectID, "allowed_cidrs": []string{"203.0.113.7", "2001:DB8::1/64"},
-		"extensions": []string{"vector"}, "maintenance_day": "sunday", "maintenance_hour_utc": 4}))
+		"extensions": []string{"vector"}, "maintenance_day": "sunday", "maintenance_hour_utc": 4,
+		"parameters": map[string]any{"statement_timeout": "30s"}}))
 	st := r.create(cfg)
 	api.expectBody("POST", "/v1/databases", `{"name":"shop-db","engine":"postgres","size":"pg-1-1","deletion_protection":true,
 		"project_id":"`+testProjectID+`","allowed_cidrs":["2001:DB8::1/64","203.0.113.7"],"extensions":["vector"]}`)
-	api.expectBody("PATCH", "/v1/databases/shop-db", `{"maintenance_day":0,"maintenance_hour_utc":4}`)
+	// The server settings, like the maintenance window, are set once the database exists.
+	api.expectBody("PATCH", "/v1/databases/shop-db", `{"maintenance_day":0,"maintenance_hour_utc":4,"parameters":{"statement_timeout":"30s"}}`)
 	if got := api.databases["shop-db"].AllowedCIDRs; strings.Join(got, ",") != "2001:db8::/64,203.0.113.7/32" {
 		t.Fatalf("the fake normalised to %v", got)
 	}
 	if str(t, st, "password") != "s3cret-owner-password" || str(t, st, "version") != "18" || num(t, st, "disk_gb") != 10 ||
 		num(t, st, "pooler_port") != 6432 || str(t, st, "status") != "provisioning" || !boolean(t, st, "backups") ||
-		str(t, st, "maintenance_day") != "sunday" || num(t, st, "disk_autogrow_max_gb") != 0 || !isNull(t, st, "eviction_policy") {
+		str(t, st, "maintenance_day") != "sunday" || num(t, st, "disk_autogrow_max_gb") != 0 || !isNull(t, st, "eviction_policy") ||
+		str(t, st, "parameters", "statement_timeout") != "30s" {
 		t.Fatalf("state %v", st)
 	}
 
@@ -44,13 +47,16 @@ func TestDatabasePostgresLifecycle(t *testing.T) {
 	api.databases["shop-db"].Status = "running"
 	api.resetCalls()
 	next := pg(map[string]any{"size": "pg-2-4", "project_id": testProjectID, "allowed_cidrs": []string{"203.0.113.7", "198.51.100.0/24"},
-		"extensions": []string{"vector", "pg_trgm"}, "maintenance_day": "daily", "maintenance_hour_utc": 4, "disk_autogrow_max_gb": 100})
+		"extensions": []string{"vector", "pg_trgm"}, "maintenance_day": "daily", "maintenance_hour_utc": 4, "disk_autogrow_max_gb": 100,
+		"parameters": map[string]any{"statement_timeout": "1min", "work_mem": "8MB"}})
 	st = r.update(st, r.config(next))
 	api.expectBody("PATCH", "/v1/databases/shop-db", `{"maintenance_day":null,"disk_autogrow_max_gb":100,
+		"parameters":{"statement_timeout":"1min","work_mem":"8MB"},
 		"allowed_cidrs":["198.51.100.0/24","203.0.113.7"],"extensions":["pg_trgm","vector"]}`)
 	api.expectBody("POST", "/v1/databases/shop-db/resize", `{"size":"pg-2-4","when":"now"}`)
 	// The bigger size came with a bigger disk.
-	if num(t, st, "disk_gb") != 40 || str(t, st, "size") != "pg-2-4" || str(t, st, "maintenance_day") != "daily" {
+	if num(t, st, "disk_gb") != 40 || str(t, st, "size") != "pg-2-4" || str(t, st, "maintenance_day") != "daily" ||
+		str(t, st, "parameters", "work_mem") != "8MB" {
 		t.Fatalf("state %v", st)
 	}
 

@@ -22,6 +22,26 @@ resource "masterdaweb_serverless_service" "web" {
   rollout_minutes = 15
 }
 
+# A classic PHP site on PHP 7.4 and Apache, which honours its .htaccess.
+# Without a Dockerfile the release comes from composer.json; these settings
+# choose it and the extensions instead, and changing one builds the live
+# code again.
+resource "masterdaweb_serverless_service" "legacy" {
+  project_id = masterdaweb_project.shop.id
+  name       = "legacy-site"
+  kind       = "WEB"
+
+  git = {
+    repo_url = "https://github.com/acme/legacy-site"
+    branch   = "main"
+  }
+
+  php_version     = "7.4"
+  php_server      = "apache"
+  php_extensions  = ["gd", "soap"]
+  system_packages = ["ghostscript"]
+}
+
 # A queue worker from a repository connected in the console (Settings ›
 # Integrations): every push to main deploys.
 resource "masterdaweb_serverless_service" "worker" {

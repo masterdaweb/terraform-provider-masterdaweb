@@ -12,6 +12,13 @@ resource "masterdaweb_database" "db" {
   maintenance_day      = "sunday"
   maintenance_hour_utc = 4
 
+  # Server settings, applied without a restart (the console's Parameters
+  # tab lists the ones each engine takes).
+  parameters = {
+    statement_timeout = "30s"
+    work_mem          = "16MB"
+  }
+
   # On by default. To destroy the database, set it to false and apply first.
   deletion_protection = true
 }

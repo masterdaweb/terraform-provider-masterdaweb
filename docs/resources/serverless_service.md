@@ -36,6 +36,26 @@ resource "masterdaweb_serverless_service" "web" {
   rollout_minutes = 15
 }
 
+# A classic PHP site on PHP 7.4 and Apache, which honours its .htaccess.
+# Without a Dockerfile the release comes from composer.json; these settings
+# choose it and the extensions instead, and changing one builds the live
+# code again.
+resource "masterdaweb_serverless_service" "legacy" {
+  project_id = masterdaweb_project.shop.id
+  name       = "legacy-site"
+  kind       = "WEB"
+
+  git = {
+    repo_url = "https://github.com/acme/legacy-site"
+    branch   = "main"
+  }
+
+  php_version     = "7.4"
+  php_server      = "apache"
+  php_extensions  = ["gd", "soap"]
+  system_packages = ["ghostscript"]
+}
+
 # A queue worker from a repository connected in the console (Settings ›
 # Integrations): every push to main deploys.
 resource "masterdaweb_serverless_service" "worker" {
@@ -129,6 +149,7 @@ Destroying the service waits until it is gone, so its name is free again. A serv
 - `deletion_protection` (Boolean) Whether the service is protected from deletion. To destroy a protected service, set it to false and apply first.
 - `deploy` (Boolean) Whether creating the service, and the changes Terraform makes to it, start a deployment. False saves them for the next deployment. Terraform never waits for a deployment to finish.
 - `dockerfile_path` (String) The Dockerfile to build with, when it is not ./Dockerfile. "" for the default.
+- `document_root` (String) PHP: the folder served, relative to root_dir ("." for the root). "" to detect the folder with index.php.
 - `git` (Attributes) Build the service from a Git repository: a public one by its https address, or one connected in the console (Settings › Integrations), which deploys on every push. Give git or image. (see [below for nested schema](#nestedatt--git))
 - `graceful_shutdown_seconds` (Number) How long an instance has to finish its work when it stops, in seconds.
 - `health_check_path` (String) Web and private services: a path that answers 200 when the app is ready, like /health. "" for none.
@@ -137,6 +158,10 @@ Destroying the service waits until it is gone, so its name is free again. A serv
 - `instances` (Number) Workers: how many instances run.
 - `max_instances` (Number) Web and private services: the most instances it scales to.
 - `min_instances` (Number) Web and private services: the fewest instances. 0 sleeps when idle.
+- `node_version` (String) Builds without a Dockerfile: the Node.js release, like 22, 20.11 or lts. "" for package.json's engines or .nvmrc.
+- `php_extensions` (List of String) PHP extensions beyond the database drivers every PHP build has and composer.json's ext-*, like gd or redis-6.1.0.
+- `php_server` (String) Builds without a Dockerfile: apache (honours .htaccess, every release) or frankenphp (8.2 on). "" to detect.
+- `php_version` (String) Builds without a Dockerfile: the PHP release (7.4 to 8.5). "" for what composer.json allows, preferring 8.4.
 - `port` (Number) Web and private services: the port the app listens on.
 - `release_command` (String) A command run once per deployment, before the new version takes traffic (migrations). "" for none.
 - `request_timeout_seconds` (Number) Web and private services: the longest a request may take, in seconds.
@@ -146,6 +171,7 @@ Destroying the service waits until it is gone, so its name is free again. A serv
 - `size` (String) The instance size: x-small, small, medium or large (x-large on request).
 - `start_command` (String) The command that starts the app, when the build's own is not the one. "" for none.
 - `startup_timeout_seconds` (Number) How long a new version has to answer its health check, in seconds.
+- `system_packages` (List of String) Builds without a Dockerfile: Debian packages in the image and at build, like ffmpeg.
 - `wait_for_ci` (Boolean) Whether a push waits for the repository's checks to pass before it deploys.
 - `watch_paths` (List of String) Only pushes that change these paths (patterns) deploy. Empty: every push.
 

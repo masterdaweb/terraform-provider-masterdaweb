@@ -38,6 +38,13 @@ resource "masterdaweb_database" "db" {
   maintenance_day      = "sunday"
   maintenance_hour_utc = 4
 
+  # Server settings, applied without a restart (the console's Parameters
+  # tab lists the ones each engine takes).
+  parameters = {
+    statement_timeout = "30s"
+    work_mem          = "16MB"
+  }
+
   # On by default. To destroy the database, set it to false and apply first.
   deletion_protection = true
 }
@@ -70,7 +77,9 @@ resource "masterdaweb_database" "cache" {
 - `extensions` (Set of String) PostgreSQL: the extensions to enable, like vector or pg_trgm. They are only ever added: removing one is done on the database itself (DROP EXTENSION).
 - `maintenance_day` (String) The day of the weekly maintenance window (sunday … saturday), or daily.
 - `maintenance_hour_utc` (Number) The hour of the maintenance window, UTC (0 to 23).
+- `parameters` (Map of String) Server settings the engine lets a customer change (the console's Parameters, or GET /v1/databases/info, lists them), like statement_timeout = "30s" or sql_mode = "". Applied without a restart; {} for the platform's.
 - `project_id` (String) The serverless project it belongs to (where the console shows it).
+- `region_id` (String) Where the database runs, for good: a region's id (the masterdaweb_regions data source). In a project, the project's (one set must be the same). Unset: the project's, or the platform's default location. Changing it replaces the database.
 - `version` (String) The release series, like "18" (PostgreSQL), "8.4" (MySQL) or "11.8" (MariaDB). The newest on offer when left out. Changing it replaces the database.
 
 ### Read-Only

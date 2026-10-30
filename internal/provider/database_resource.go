@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -46,9 +47,11 @@ type databaseModel struct {
 	DiskGB             types.Int64  `tfsdk:"disk_gb"`
 	DiskAutogrowMaxGB  types.Int64  `tfsdk:"disk_autogrow_max_gb"`
 	ProjectID          types.String `tfsdk:"project_id"`
+	RegionID           types.String `tfsdk:"region_id"`
 	AllowedCIDRs       types.Set    `tfsdk:"allowed_cidrs"`
 	Extensions         types.Set    `tfsdk:"extensions"`
 	EvictionPolicy     types.String `tfsdk:"eviction_policy"`
+	Parameters         types.Map    `tfsdk:"parameters"`
 	Backups            types.Bool   `tfsdk:"backups"`
 	DeletionProtection types.Bool   `tfsdk:"deletion_protection"`
 	MaintenanceDay     types.String `tfsdk:"maintenance_day"`
@@ -125,6 +128,18 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Description: "The serverless project it belongs to (where the console shows it).",
 			},
+			"region_id": schema.StringAttribute{
+				Optional: true,
+				Computed: true,
+				Description: "Where the database runs, for good: a region's id (the masterdaweb_regions data source). In a project, " +
+					"the project's (one set must be the same). Unset: the project's, or the platform's default location. Changing " +
+					"it replaces the database.",
+				Validators: []validator.String{stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9]+$`), "must be a region id, like \"3\"")},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
+			},
 			"allowed_cidrs": schema.SetAttribute{
 				Optional: true, Computed: true, ElementType: types.StringType,
 				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, nil)),
@@ -144,6 +159,12 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Description: "Redis: what happens when memory is full. noeviction (the default, for queues) or an LRU/LFU " +
 					"policy like allkeys-lru (for a cache).",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"parameters": schema.MapAttribute{
+				Optional: true, Computed: true, ElementType: types.StringType,
+				Description: "Server settings the engine lets a customer change (the console's Parameters, or GET /v1/databases/info, lists them), " +
+					"like statement_timeout = \"30s\" or sql_mode = \"\". Applied without a restart; {} for the platform's.",
+				PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 			},
 			"backups": schema.BoolAttribute{
 				Optional: true, Computed: true,
@@ -237,9 +258,11 @@ func databaseFromAPI(prior databaseModel, d *client.Database) databaseModel {
 		DiskGB:             types.Int64Value(d.Disk.SizeGB),
 		DiskAutogrowMaxGB:  types.Int64Value(0),
 		ProjectID:          stringOrNull(d.ProjectID),
+		RegionID:           regionIDOf(d.DatacenterID),
 		AllowedCIDRs:       stringSet(d.AllowedCIDRs),
 		Extensions:         stringSet(d.Extensions),
 		EvictionPolicy:     stringOrNull(d.EvictionPolicy),
+		Parameters:         stringMap(d.Parameters),
 		Backups:            types.BoolValue(d.BackupsEnabled),
 		DeletionProtection: types.BoolValue(d.DeletionProtection),
 		MaintenanceDay:     types.StringValue("daily"),
@@ -288,6 +311,11 @@ func maintenancePatch(plan, state databaseModel, creating bool) map[string]any {
 	}
 	if known(plan.MaintenanceHourUTC) && (creating || !plan.MaintenanceHourUTC.Equal(state.MaintenanceHourUTC)) {
 		patch["maintenance_hour_utc"] = plan.MaintenanceHourUTC.ValueInt64()
+	}
+	if known(plan.Parameters) && (creating && len(plan.Parameters.Elements()) > 0 || !creating && !plan.Parameters.Equal(state.Parameters)) {
+		params := map[string]string{}
+		_ = plan.Parameters.ElementsAs(context.Background(), &params, false)
+		patch["parameters"] = params
 	}
 	if known(plan.DiskAutogrowMaxGB) && (creating || !plan.DiskAutogrowMaxGB.Equal(state.DiskAutogrowMaxGB)) {
 		if n := plan.DiskAutogrowMaxGB.ValueInt64(); n > 0 {
@@ -346,6 +374,9 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 	if known(plan.ProjectID) {
 		body["project_id"] = plan.ProjectID.ValueString()
 	}
+	if id, ok := regionIDValue(plan.RegionID); ok {
+		body["datacenter_id"] = id
+	}
 	if cidrs := sortedStrings(ctx, plan.AllowedCIDRs); len(cidrs) > 0 {
 		body["allowed_cidrs"] = cidrs
 	}
@@ -369,7 +400,7 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		updated, err := r.client.UpdateDatabase(ctx, d.Name, patch)
 		if err != nil {
 			resp.Diagnostics.AddWarning("The maintenance settings were not saved",
-				"The database was created, but its maintenance window or disk growth could not be set: "+err.Error()+
+				"The database was created, but its maintenance window, disk growth or server settings could not be set: "+err.Error()+
 					" The next apply tries again.")
 		} else {
 			d = updated

@@ -59,6 +59,12 @@ type serviceModel struct {
 	RootDir                 types.String `tfsdk:"root_dir"`
 	DockerfilePath          types.String `tfsdk:"dockerfile_path"`
 	WatchPaths              types.List   `tfsdk:"watch_paths"`
+	PHPVersion              types.String `tfsdk:"php_version"`
+	PHPServer               types.String `tfsdk:"php_server"`
+	PHPExtensions           types.List   `tfsdk:"php_extensions"`
+	DocumentRoot            types.String `tfsdk:"document_root"`
+	NodeVersion             types.String `tfsdk:"node_version"`
+	SystemPackages          types.List   `tfsdk:"system_packages"`
 	StartupTimeoutSeconds   types.Int64  `tfsdk:"startup_timeout_seconds"`
 	MinInstances            types.Int64  `tfsdk:"min_instances"`
 	MaxInstances            types.Int64  `tfsdk:"max_instances"`
@@ -146,6 +152,12 @@ var serviceSettings = []settingSpec{
 	{name: "root_dir", kind: settingText, build: true},
 	{name: "dockerfile_path", kind: settingOptional, build: true},
 	{name: "watch_paths", kind: settingList},
+	{name: "php_version", kind: settingOptional, build: true},
+	{name: "php_server", kind: settingOptional, build: true},
+	{name: "php_extensions", kind: settingList, build: true},
+	{name: "document_root", kind: settingOptional, build: true},
+	{name: "node_version", kind: settingOptional, build: true},
+	{name: "system_packages", kind: settingList, build: true},
 	{name: "startup_timeout_seconds", kind: settingInt},
 	{name: "min_instances", kind: settingInt},
 	{name: "max_instances", kind: settingInt},
@@ -181,6 +193,18 @@ func (m *serviceModel) setting(name string) attr.Value {
 		return m.DockerfilePath
 	case "watch_paths":
 		return m.WatchPaths
+	case "php_version":
+		return m.PHPVersion
+	case "php_server":
+		return m.PHPServer
+	case "php_extensions":
+		return m.PHPExtensions
+	case "document_root":
+		return m.DocumentRoot
+	case "node_version":
+		return m.NodeVersion
+	case "system_packages":
+		return m.SystemPackages
 	case "startup_timeout_seconds":
 		return m.StartupTimeoutSeconds
 	case "min_instances":
@@ -381,6 +405,24 @@ func (r *serviceResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Validators:    []validator.List{listvalidator.SizeAtMost(20)},
 				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
+			"php_version": settingString("Builds without a Dockerfile: the PHP release (7.4 to 8.5). \"\" for what composer.json allows, preferring 8.4.",
+				stringvalidator.OneOf("", "7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5")),
+			"php_server": settingString("Builds without a Dockerfile: apache (honours .htaccess, every release) or frankenphp (8.2 on). \"\" to detect.",
+				stringvalidator.OneOf("", "apache", "frankenphp")),
+			"php_extensions": schema.ListAttribute{
+				Optional: true, Computed: true, ElementType: types.StringType,
+				Description:   "PHP extensions beyond the database drivers every PHP build has and composer.json's ext-*, like gd or redis-6.1.0.",
+				Validators:    []validator.List{listvalidator.SizeAtMost(30)},
+				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
+			"document_root": settingString("PHP: the folder served, relative to root_dir (\".\" for the root). \"\" to detect the folder with index.php."),
+			"node_version":  settingString("Builds without a Dockerfile: the Node.js release, like 22, 20.11 or lts. \"\" for package.json's engines or .nvmrc."),
+			"system_packages": schema.ListAttribute{
+				Optional: true, Computed: true, ElementType: types.StringType,
+				Description:   "Builds without a Dockerfile: Debian packages in the image and at build, like ffmpeg.",
+				Validators:    []validator.List{listvalidator.SizeAtMost(30)},
+				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+			},
 			"startup_timeout_seconds":   settingInt64("How long a new version has to answer its health check, in seconds.", 10, 900),
 			"min_instances":             settingInt64("Web and private services: the fewest instances. 0 sleeps when idle.", 0, 100),
 			"max_instances":             settingInt64("Web and private services: the most instances it scales to.", 1, 100),
@@ -544,6 +586,12 @@ func serviceFromAPI(ctx context.Context, prior serviceModel, s *client.Service, 
 		RootDir:                 types.StringValue(st.RootDir),
 		DockerfilePath:          stringOrEmpty(st.DockerfilePath),
 		WatchPaths:              stringList(st.WatchPaths),
+		PHPVersion:              stringOrEmpty(st.PHPVersion),
+		PHPServer:               stringOrEmpty(st.PHPServer),
+		PHPExtensions:           stringList(st.PHPExtensions),
+		DocumentRoot:            stringOrEmpty(st.DocumentRoot),
+		NodeVersion:             stringOrEmpty(st.NodeVersion),
+		SystemPackages:          stringList(st.SystemPackages),
 		StartupTimeoutSeconds:   types.Int64Value(st.StartupTimeoutSeconds),
 		MinInstances:            types.Int64Value(st.MinInstances),
 		MaxInstances:            types.Int64Value(st.MaxInstances),

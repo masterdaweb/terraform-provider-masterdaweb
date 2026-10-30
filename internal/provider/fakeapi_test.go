@@ -445,7 +445,7 @@ func (f *fakeAPI) listProjects(w http.ResponseWriter, _ *http.Request, _ map[str
 }
 
 func (f *fakeAPI) createProject(w http.ResponseWriter, _ *http.Request, _ map[string]string, body map[string]any) {
-	if !strict(w, body, "name", "description", "deletion_protection") {
+	if !strict(w, body, "name", "description", "deletion_protection", "datacenter_id") {
 		return
 	}
 	name := normalizeProjectName(fmt.Sprint(body["name"]))
@@ -459,8 +459,10 @@ func (f *fakeAPI) createProject(w http.ResponseWriter, _ *http.Request, _ map[st
 	if v, ok := body["deletion_protection"].(bool); ok {
 		protected = v
 	}
-	p := &client.Project{ID: f.newID(), Name: name, Description: trimOrNull(body["description"]), Region: "bh",
-		DeletionProtection: protected, CreatedAt: fakeNow, UpdatedAt: fakeNow}
+	// Belo Horizonte (3) unless another location is asked for.
+	dc, region := fakeLocation(body["datacenter_id"], nil)
+	p := &client.Project{ID: f.newID(), Name: name, Description: trimOrNull(body["description"]), Region: region,
+		DatacenterID: &dc, DeletionProtection: protected, CreatedAt: fakeNow, UpdatedAt: fakeNow}
 	f.projects[p.ID] = p
 	writeJSON(w, 201, p)
 }
@@ -535,7 +537,7 @@ func (f *fakeAPI) deleteProject(w http.ResponseWriter, r *http.Request, p map[st
 var fakeServiceName = regexp.MustCompile(`^[a-z]([a-z0-9-]{0,38}[a-z0-9])?$`)
 
 var settingFields = []string{"size", "build_command", "start_command", "release_command", "root_dir", "dockerfile_path",
-	"watch_paths", "port", "health_check_path", "startup_timeout_seconds", "min_instances", "max_instances", "concurrency",
+	"watch_paths", "php_version", "php_server", "php_extensions", "document_root", "node_version", "system_packages", "port", "health_check_path", "startup_timeout_seconds", "min_instances", "max_instances", "concurrency",
 	"idle_timeout_seconds", "request_timeout_seconds", "graceful_shutdown_seconds", "rollout_percent", "rollout_minutes",
 	"instances", "cron_schedule", "cron_timezone", "cron_timeout_seconds"}
 
@@ -605,6 +607,18 @@ func (f *fakeAPI) mergeSettings(w http.ResponseWriter, s *client.ServiceSettings
 			s.CronTimezone = fmt.Sprint(v)
 		case "watch_paths":
 			s.WatchPaths = strList(v)
+		case "php_version":
+			s.PHPVersion = trimOrNull(v)
+		case "php_server":
+			s.PHPServer = trimOrNull(v)
+		case "document_root":
+			s.DocumentRoot = trimOrNull(v)
+		case "node_version":
+			s.NodeVersion = trimOrNull(v)
+		case "php_extensions":
+			s.PHPExtensions = strList(v)
+		case "system_packages":
+			s.SystemPackages = strList(v)
 		case "rollout_percent":
 			if v == nil {
 				s.RolloutPercent = nil
@@ -1515,7 +1529,7 @@ func (f *fakeAPI) listDatabases(w http.ResponseWriter, _ *http.Request, _ map[st
 }
 
 func (f *fakeAPI) createDatabase(w http.ResponseWriter, _ *http.Request, _ map[string]string, body map[string]any) {
-	if !strict(w, body, "name", "engine", "version", "size", "project_id", "allowed_cidrs", "extensions",
+	if !strict(w, body, "name", "engine", "version", "size", "project_id", "datacenter_id", "allowed_cidrs", "extensions",
 		"eviction_policy", "backups", "deletion_protection") {
 		return
 	}
@@ -1547,9 +1561,18 @@ func (f *fakeAPI) createDatabase(w http.ResponseWriter, _ *http.Request, _ map[s
 	sort.Strings(ext)
 	id := f.newID()
 	host := id + ".db.mwapp.com.br"
+	// Its project's location, else the one asked for, else Belo Horizonte.
+	var inProject *int64
+	if pid := optString(body["project_id"]); pid != nil {
+		if pr, ok := f.projects[*pid]; ok {
+			inProject = pr.DatacenterID
+		}
+	}
+	dc, _ := fakeLocation(body["datacenter_id"], inProject)
 	d := &client.Database{ID: id, Name: name, Engine: engine, Version: client.Series(fakeDBVersions[engine]), Size: *size,
-		Status: "provisioning", ProjectID: optString(body["project_id"]), AllowedCIDRs: cidrs, Extensions: ext,
-		BackupsEnabled: engine != "valkey", DeletionProtection: true,
+		DatacenterID: &dc,
+		Status:       "provisioning", ProjectID: optString(body["project_id"]), AllowedCIDRs: cidrs, Extensions: ext,
+		BackupsEnabled: engine != "valkey", DeletionProtection: true, Parameters: map[string]string{},
 		Maintenance: client.DatabaseMaintenance{HourUTC: 3}, Disk: client.DatabaseDisk{SizeGB: size.DiskGB}, CreatedAt: fakeNow}
 	if v, ok := body["version"].(string); ok {
 		d.Version = client.Series(v)
@@ -1598,7 +1621,7 @@ func (f *fakeAPI) getDatabase(w http.ResponseWriter, _ *http.Request, p map[stri
 }
 
 func (f *fakeAPI) updateDatabase(w http.ResponseWriter, _ *http.Request, p map[string]string, body map[string]any) {
-	if !strict(w, body, "allowed_cidrs", "extensions", "eviction_policy", "backups", "deletion_protection", "project_id",
+	if !strict(w, body, "allowed_cidrs", "extensions", "eviction_policy", "parameters", "backups", "deletion_protection", "project_id",
 		"maintenance_day", "maintenance_hour_utc", "disk_autogrow_max_gb") {
 		return
 	}
@@ -1634,6 +1657,12 @@ func (f *fakeAPI) updateDatabase(w http.ResponseWriter, _ *http.Request, p map[s
 	}
 	if v, ok := body["eviction_policy"].(string); ok {
 		d.EvictionPolicy = &v
+	}
+	if v, ok := body["parameters"].(map[string]any); ok {
+		d.Parameters = map[string]string{}
+		for k, x := range v {
+			d.Parameters[k] = fmt.Sprint(x)
+		}
 	}
 	if v, ok := body["backups"].(bool); ok {
 		d.BackupsEnabled = v
@@ -1897,4 +1926,20 @@ func (f *fakeAPI) deleteBucket(w http.ResponseWriter, r *http.Request, p map[str
 	now := fakeNow
 	b.Status, b.DeletedAt = "deleting", &now
 	writeJSON(w, 200, b)
+}
+
+// fakeLocation is where a new project or database runs: the datacenter asked
+// for, else its project's, else Belo Horizonte (3, "bh"); Dallas is 4 ("dal").
+func fakeLocation(asked any, project *int64) (int64, string) {
+	dc := int64(3)
+	if project != nil {
+		dc = *project
+	}
+	if v, ok := asked.(float64); ok {
+		dc = int64(v)
+	}
+	if dc == 4 {
+		return dc, "dal"
+	}
+	return dc, "bh"
 }

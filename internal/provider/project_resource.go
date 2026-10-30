@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -35,6 +36,7 @@ type projectModel struct {
 	Description        types.String `tfsdk:"description"`
 	DeletionProtection types.Bool   `tfsdk:"deletion_protection"`
 	Region             types.String `tfsdk:"region"`
+	RegionID           types.String `tfsdk:"region_id"`
 	CreatedAt          types.String `tfsdk:"created_at"`
 }
 
@@ -72,8 +74,19 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"region": schema.StringAttribute{
 				Computed:      true,
-				Description:   "Where the project's serverless services run.",
+				Description:   "Where the project's serverless services run: the location's short code.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"region_id": schema.StringAttribute{
+				Optional: true,
+				Computed: true,
+				Description: "Where the project runs, for good: a region's id (the masterdaweb_regions data source). Unset: the " +
+					"platform's default location. Changing it replaces the project.",
+				Validators: []validator.String{stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9]+$`), "must be a region id, like \"3\"")},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
 			},
 			"created_at": schema.StringAttribute{
 				Computed:      true,
@@ -99,6 +112,7 @@ func projectFromAPI(prior projectModel, p *client.Project) projectModel {
 		Description:        keepEquivalent(prior.Description, p.Description),
 		DeletionProtection: types.BoolValue(p.DeletionProtection),
 		Region:             types.StringValue(p.Region),
+		RegionID:           regionIDOf(p.DatacenterID),
 		CreatedAt:          types.StringValue(p.CreatedAt),
 	}
 	if known(prior.Name) && normalizeProjectName(prior.Name.ValueString()) == p.Name {
@@ -119,6 +133,9 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 	if !plan.DeletionProtection.ValueBool() {
 		body["deletion_protection"] = false
+	}
+	if id, ok := regionIDValue(plan.RegionID); ok {
+		body["datacenter_id"] = id
 	}
 	p, err := r.client.CreateProject(ctx, body)
 	if err != nil {

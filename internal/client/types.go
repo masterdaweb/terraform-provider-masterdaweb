@@ -15,6 +15,7 @@ type Project struct {
 	Name               string  `json:"name"`
 	Description        *string `json:"description"`
 	Region             string  `json:"region"`
+	DatacenterID       *int64  `json:"datacenter_id"`
 	DeletionProtection bool    `json:"deletion_protection"`
 	DeploysFrozen      bool    `json:"deploys_frozen"`
 	FrozenReason       *string `json:"frozen_reason"`
@@ -64,6 +65,12 @@ type ServiceSettings struct {
 	RootDir                 string   `json:"root_dir"`
 	DockerfilePath          *string  `json:"dockerfile_path"`
 	WatchPaths              []string `json:"watch_paths"`
+	PHPVersion              *string  `json:"php_version"`
+	PHPServer               *string  `json:"php_server"`
+	PHPExtensions           []string `json:"php_extensions"`
+	DocumentRoot            *string  `json:"document_root"`
+	NodeVersion             *string  `json:"node_version"`
+	SystemPackages          []string `json:"system_packages"`
 	Port                    int64    `json:"port"`
 	HealthCheckPath         *string  `json:"health_check_path"`
 	StartupTimeoutSeconds   int64    `json:"startup_timeout_seconds"`
@@ -292,10 +299,12 @@ type Database struct {
 	Failure            *string             `json:"failure"`
 	ChangesPending     bool                `json:"changes_pending"`
 	ProjectID          *string             `json:"project_id"`
+	DatacenterID       *int64              `json:"datacenter_id"`
 	Connection         DatabaseConnection  `json:"connection"`
 	AllowedCIDRs       []string            `json:"allowed_cidrs"`
 	Extensions         []string            `json:"extensions"`
 	EvictionPolicy     *string             `json:"eviction_policy"`
+	Parameters         map[string]string   `json:"parameters"`
 	BackupsEnabled     bool                `json:"backups_enabled"`
 	DeletionProtection bool                `json:"deletion_protection"`
 	Maintenance        DatabaseMaintenance `json:"maintenance"`

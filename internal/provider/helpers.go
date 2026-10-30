@@ -136,6 +136,14 @@ func stringSet(items []string) types.Set {
 	return types.SetValueMust(types.StringType, vals)
 }
 
+func stringMap(items map[string]string) types.Map {
+	vals := make(map[string]attr.Value, len(items))
+	for k, s := range items {
+		vals[k] = types.StringValue(s)
+	}
+	return types.MapValueMust(types.StringType, vals)
+}
+
 // listStrings is a list or set's known strings (nil when null or unknown).
 func listStrings(ctx context.Context, v interface {
 	IsNull() bool
@@ -231,3 +239,21 @@ func sameStringSets(a, b []string, norm func(string) string) bool {
 }
 
 func itoa(n int64) string { return strconv.FormatInt(n, 10) }
+
+// regionIDOf is a datacenter id as the region_id attributes keep it (the
+// masterdaweb_regions data source's id), or null when there is none.
+func regionIDOf(id *int64) types.String {
+	if id == nil {
+		return types.StringNull()
+	}
+	return types.StringValue(strconv.FormatInt(*id, 10))
+}
+
+// regionIDValue is a planned region_id as the API takes it (datacenter_id).
+func regionIDValue(v types.String) (int64, bool) {
+	if !known(v) || v.ValueString() == "" {
+		return 0, false
+	}
+	id, err := strconv.ParseInt(v.ValueString(), 10, 64)
+	return id, err == nil
+}

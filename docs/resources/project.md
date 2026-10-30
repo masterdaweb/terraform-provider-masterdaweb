@@ -26,6 +26,10 @@ resource "masterdaweb_project" "shop" {
 
   # On by default. To destroy the project, set it to false and apply first.
   deletion_protection = true
+
+  # Where it runs, for good: a region's id (the masterdaweb_regions data
+  # source). Left out: the platform's default location.
+  # region_id = "3"
 }
 ```
 
@@ -40,12 +44,13 @@ resource "masterdaweb_project" "shop" {
 
 - `deletion_protection` (Boolean) Whether the project is protected from deletion. On by default: to destroy the project, set it to false and apply first.
 - `description` (String) What the project is for, up to 500 characters.
+- `region_id` (String) Where the project runs, for good: a region's id (the masterdaweb_regions data source). Unset: the platform's default location. Changing it replaces the project.
 
 ### Read-Only
 
 - `created_at` (String) When the project was created (RFC 3339).
 - `id` (String) The project's id.
-- `region` (String) Where the project's serverless services run.
+- `region` (String) Where the project's serverless services run: the location's short code.
 
 ## Import
 
