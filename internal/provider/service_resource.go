@@ -428,7 +428,7 @@ func (r *serviceResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"max_instances":             settingInt64("Web and private services: the most instances it scales to.", 1, 100),
 			"concurrency":               settingInt64("Web and private services: the requests one instance takes at once.", 1, 250),
 			"idle_timeout_seconds":      settingInt64("Web and private services: how long an instance stays without requests before it stops.", 60, 3600),
-			"request_timeout_seconds":   settingInt64("Web and private services: the longest a request may take, in seconds.", 1, 100),
+			"request_timeout_seconds":   settingInt64("Web and private services: the longest a request may take, in seconds (up to 600). On the public address the app must also send something at least every 100 s.", 1, 600),
 			"graceful_shutdown_seconds": settingInt64("How long an instance has to finish its work when it stops, in seconds.", 1, 30),
 			"rollout_percent": schema.Int64Attribute{
 				Optional: true, Computed: true,

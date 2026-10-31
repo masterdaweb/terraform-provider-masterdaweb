@@ -164,7 +164,7 @@ Destroying the service waits until it is gone, so its name is free again. A serv
 - `php_version` (String) Builds without a Dockerfile: the PHP release (7.4 to 8.5). "" for what composer.json allows, preferring 8.4.
 - `port` (Number) Web and private services: the port the app listens on.
 - `release_command` (String) A command run once per deployment, before the new version takes traffic (migrations). "" for none.
-- `request_timeout_seconds` (Number) Web and private services: the longest a request may take, in seconds.
+- `request_timeout_seconds` (Number) Web and private services: the longest a request may take, in seconds (up to 600). On the public address the app must also send something at least every 100 s.
 - `rollout_minutes` (Number) Web and private services: how long a gradual rollout lasts, in minutes (1 to 60, 10 by default). It shapes the next deployment and never starts one by itself.
 - `rollout_percent` (Number) Web and private services, a gradual rollout: the share of the requests (1 to 50%) a new version takes first, for rollout_minutes, before it takes them all — or none, if its error rate climbs. Left out, or 0: all at once. It shapes the next deployment and never starts one by itself.
 - `root_dir` (String) The folder of the repository the app is in, like apps/api. "" for the root.
