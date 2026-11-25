@@ -559,7 +559,19 @@ func (r *serviceResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 		return
 	}
 	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status"), types.StringUnknown())...)
-	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("repository_settings"), types.ListUnknown(types.StringType))...)
+	// A Git service's update may build another commit, with another mw.toml.
+	// An image service has no repository: its settings from one stay empty,
+	// and "(known after apply)" on every plan that changed its size said
+	// otherwise (production check, 2026-11-25).
+	if git, ok := planned["git"]; ok && !git.IsNull() {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("repository_settings"), types.ListUnknown(types.StringType))...)
+		return
+	}
+	// The framework marks every computed value unknown when anything
+	// changes: the state's empty list is put back.
+	var settings types.List
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("repository_settings"), &settings)...)
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("repository_settings"), settings)...)
 }
 
 func (r *serviceResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
