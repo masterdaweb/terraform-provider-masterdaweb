@@ -3,6 +3,14 @@
 All notable changes to this provider are written here, newest first. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org).
 
+## 0.2.1 (2026-11-25)
+
+### Fixed
+
+- An image service's plan shows only what changes: changing its size or `max_instances` no longer planned
+  `repository_settings = [] -> (known after apply)`. A Git service still plans it unknown, as an update may build
+  another commit with another `mw.toml`.
+
 ## 0.1.0 (Unreleased)
 
 The first release, over the whole public API v1.
